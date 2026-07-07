@@ -1,0 +1,23 @@
+{
+  "name": "Lito Radar Chart",
+  "organization": "Lito Charts",
+  "description": "Radar chart for Looker Studio using Chart.js.",
+  "logoUrl": "https://raw.githubusercontent.com/google/material-design-icons/master/png/action/assessment/materialicons/48dp/2x/baseline_assessment_black_48dp.png",
+  "packageUrl": "https://github.com/lcalvarez-teco/Lito-Charts",
+  "supportUrl": "https://github.com/lcalvarez-teco/Lito-Charts/issues",
+  "privacyPolicyUrl": "https://github.com/lcalvarez-teco/Lito-Charts",
+  "termsOfServiceUrl": "https://github.com/lcalvarez-teco/Lito-Charts",
+  "devMode": true,
+  "components": [
+    {
+      "id": "litoRadar",
+      "name": "Lito Radar Chart",
+      "description": "Radar chart with up to two numeric series.",
+      "resource": {
+        "js": "index.js",
+        "css": "index.css"
+      },
+      "config": "config.json"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: Roboto, Arial, sans-serif;
+  background: transparent;
+}
+
+#root {
+  box-sizing: border-box;
+  width: 100vw;
+  height: 100vh;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.lito-title {
+  text-align: center;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.lito-subtitle {
+  text-align: center;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.2;
+  margin: 2px 0 6px;
+}
+
+.lito-chart-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.lito-message {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #6b7280;
+  font-size: 13px;
+  padding: 16px;
+  box-sizing: border-box;
+}

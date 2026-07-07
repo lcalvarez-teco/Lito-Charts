@@ -1,0 +1,103 @@
+{
+  "data": [
+    {
+      "id": "concepts",
+      "label": "Eje",
+      "description": "Categorías del radar",
+      "type": "DIMENSION",
+      "elements": [
+        {
+          "id": "dimension",
+          "label": "Eje",
+          "type": "TEXT"
+        }
+      ],
+      "min": 1,
+      "max": 1
+    },
+    {
+      "id": "values",
+      "label": "Valores",
+      "description": "Métricas numéricas del radar. Usar 1 o 2 métricas.",
+      "type": "METRIC",
+      "elements": [
+        {
+          "id": "metric",
+          "label": "Valor",
+          "type": "NUMBER"
+        }
+      ],
+      "min": 1,
+      "max": 2
+    }
+  ],
+  "style": [
+    {
+      "id": "chartHeader",
+      "label": "Encabezado",
+      "elements": [
+        {
+          "id": "showTitle",
+          "label": "Mostrar título",
+          "type": "CHECKBOX",
+          "defaultValue": true
+        },
+        {
+          "id": "titleText",
+          "label": "Título",
+          "type": "TEXTINPUT",
+          "defaultValue": "Autoevaluación vs Equipo"
+        },
+        {
+          "id": "subtitleText",
+          "label": "Subtítulo",
+          "type": "TEXTINPUT",
+          "defaultValue": "Promedio por eje"
+        }
+      ]
+    },
+    {
+      "id": "scale",
+      "label": "Escala",
+      "elements": [
+        {
+          "id": "minValue",
+          "label": "Mínimo",
+          "type": "TEXTINPUT",
+          "defaultValue": "0"
+        },
+        {
+          "id": "maxValue",
+          "label": "Máximo",
+          "type": "TEXTINPUT",
+          "defaultValue": "5"
+        },
+        {
+          "id": "stepSize",
+          "label": "Intervalo",
+          "type": "TEXTINPUT",
+          "defaultValue": "1"
+        }
+      ]
+    },
+    {
+      "id": "labels",
+      "label": "Series",
+      "elements": [
+        {
+          "id": "seriesOneLabel",
+          "label": "Nombre serie 1",
+          "type": "TEXTINPUT",
+          "defaultValue": "Autoevaluación"
+        },
+        {
+          "id": "seriesTwoLabel",
+          "label": "Nombre serie 2",
+          "type": "TEXTINPUT",
+          "defaultValue": "Equipo"
+        }
+      ]
+    }
+  ],
+  "interactions": []
+}
