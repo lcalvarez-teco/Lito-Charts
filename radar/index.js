@@ -1,170 +1,162 @@
 (function () {
-  var DSCC_URL = "https://cdn.jsdelivr.net/npm/@google/dscc@0.4/build/dscc.min.js";
-  var CHART_URL = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
+  'use strict';
 
   var chartInstance = null;
+  var loadStarted = false;
 
   function loadScript(src) {
     return new Promise(function (resolve, reject) {
-      var existing = document.querySelector('script[src="' + src + '"]');
-      if (existing) {
-        resolve();
-        return;
-      }
-      var script = document.createElement("script");
-      script.src = src;
-      script.async = true;
-      script.onload = resolve;
-      script.onerror = function () {
-        reject(new Error("No se pudo cargar: " + src));
-      };
-      document.head.appendChild(script);
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
     });
   }
 
-  function getStyle(data, key, fallback) {
+  function loadDependencies() {
+    if (loadStarted) return Promise.resolve();
+    loadStarted = true;
+
+    var loads = [];
+
+    if (!window.dscc) {
+      loads.push(loadScript('https://cdn.jsdelivr.net/npm/@google/dscc@0.4/build/dscc.min.js'));
+    }
+
+    if (!window.Chart) {
+      loads.push(loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js'));
+    }
+
+    return Promise.all(loads);
+  }
+
+  function getStyleValue(data, key, fallback) {
     try {
-      if (data && data.style && data.style[key] && data.style[key].value !== undefined) {
+      if (data.style && data.style[key] && data.style[key].value !== undefined) {
         return data.style[key].value;
       }
     } catch (e) {}
     return fallback;
   }
 
-  function toNumber(value) {
-    if (value === null || value === undefined || value === "") return null;
-    var n = Number(String(value).replace(",", "."));
+  function asNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    var n = Number(value);
     return isNaN(n) ? null : n;
   }
 
-  function fieldName(field, fallback) {
-    if (!field) return fallback;
-    return field.name || field.label || field.id || fallback;
-  }
-
-  function getRows(data) {
-    if (!data || !data.tables) return [];
-    return data.tables.DEFAULT || [];
-  }
-
-  function getMetricFields(data) {
+  function getFieldName(data, fieldId, fallback) {
     try {
-      var fields = data.fields.values || [];
-      return fields.map(function (group) {
-        return group.metric && group.metric[0] ? group.metric[0] : null;
-      }).filter(Boolean);
-    } catch (e) {
-      return [];
-    }
+      var fields = data.fields || {};
+      var fieldGroup = fields[fieldId] || [];
+      if (fieldGroup[0] && fieldGroup[0].name) return fieldGroup[0].name;
+    } catch (e) {}
+    return fallback;
   }
 
-  function transform(data) {
-    var rows = getRows(data);
+  function normalizeRows(data) {
+    var rows = [];
+
+    if (data && data.tables && data.tables.DEFAULT) {
+      rows = data.tables.DEFAULT;
+    }
+
     var labels = [];
-    var seriesOne = [];
-    var seriesTwo = [];
+    var serie1 = [];
+    var serie2 = [];
 
     rows.forEach(function (row) {
-      var dim = row.concepts && row.concepts[0] && row.concepts[0].dimension
-        ? row.concepts[0].dimension[0]
-        : null;
+      var dim = row.axisDimension && row.axisDimension[0] ? row.axisDimension[0].value : '';
+      var metrics = row.seriesMetrics || [];
 
-      var label = dim ? dim.value : "";
-      if (!label) return;
+      if (!dim) return;
 
-      var valuesGroup = row.values || [];
-      var m1 = valuesGroup[0] && valuesGroup[0].metric ? valuesGroup[0].metric[0] : null;
-      var m2 = valuesGroup[1] && valuesGroup[1].metric ? valuesGroup[1].metric[0] : null;
-
-      labels.push(label);
-      seriesOne.push(m1 ? toNumber(m1.value) : null);
-      seriesTwo.push(m2 ? toNumber(m2.value) : null);
+      labels.push(String(dim));
+      serie1.push(metrics[0] ? asNumber(metrics[0].value) : null);
+      serie2.push(metrics[1] ? asNumber(metrics[1].value) : null);
     });
 
     return {
       labels: labels,
-      seriesOne: seriesOne,
-      seriesTwo: seriesTwo
+      serie1: serie1,
+      serie2: serie2
     };
   }
 
-  function renderMessage(message) {
-    document.body.innerHTML = '<div id="root"><div class="lito-message">' + message + '</div></div>';
-  }
-
-  function render(data) {
-    var t = transform(data);
-
-    if (!t.labels.length) {
-      renderMessage("No hay datos para mostrar. Verificá la dimensión y las métricas.");
-      return;
-    }
-
-    var showTitle = getStyle(data, "showTitle", true);
-    var titleText = getStyle(data, "titleText", "Autoevaluación vs Equipo");
-    var subtitleText = getStyle(data, "subtitleText", "Promedio por eje");
-
-    var minValue = toNumber(getStyle(data, "minValue", "0"));
-    var maxValue = toNumber(getStyle(data, "maxValue", "5"));
-    var stepSize = toNumber(getStyle(data, "stepSize", "1"));
-
-    if (minValue === null) minValue = 0;
-    if (maxValue === null) maxValue = 5;
-    if (stepSize === null) stepSize = 1;
-
-    var metricFields = getMetricFields(data);
-    var seriesOneLabel = getStyle(data, "seriesOneLabel", fieldName(metricFields[0], "Autoevaluación"));
-    var seriesTwoLabel = getStyle(data, "seriesTwoLabel", fieldName(metricFields[1], "Equipo"));
-
-    document.body.innerHTML =
-      '<div id="root">' +
-        (showTitle ? '<h3 class="lito-title">' + titleText + '</h3>' : '') +
-        (subtitleText ? '<div class="lito-subtitle">' + subtitleText + '</div>' : '') +
-        '<div class="lito-chart-wrap"><canvas id="litoRadarCanvas"></canvas></div>' +
-      '</div>';
-
-    var ctx = document.getElementById("litoRadarCanvas").getContext("2d");
-
+  function clearChart() {
     if (chartInstance) {
       chartInstance.destroy();
       chartInstance = null;
     }
+  }
+
+  function draw(data) {
+    var normalized = normalizeRows(data);
+    var showTitle = getStyleValue(data, 'showTitle', true);
+    var titleText = getStyleValue(data, 'titleText', 'AUTOEVALUACIÓN vs EQUIPO');
+    var subtitleText = getStyleValue(data, 'subtitleText', 'Promedio por eje');
+    var maxScale = Number(getStyleValue(data, 'maxScale', '5')) || 5;
+
+    var metric1Name = getFieldName(data, 'seriesMetrics', 'Autoevaluación');
+    var metric2Name = 'Equipo';
+
+    try {
+      var metrics = data.fields.seriesMetrics || [];
+      if (metrics[0] && metrics[0].name) metric1Name = metrics[0].name;
+      if (metrics[1] && metrics[1].name) metric2Name = metrics[1].name;
+    } catch (e) {}
+
+    document.body.innerHTML =
+      '<div id="viz">' +
+        (showTitle ? '<h3 class="lito-title">' + titleText + '</h3>' : '') +
+        '<div class="lito-subtitle">' + subtitleText + '</div>' +
+        '<div class="lito-chart-wrap"><canvas id="litoRadar"></canvas></div>' +
+      '</div>';
+
+    if (!normalized.labels.length) {
+      clearChart();
+      document.querySelector('.lito-chart-wrap').innerHTML =
+        '<div class="lito-empty">Sin datos para mostrar.<br>Agregá una dimensión y una o dos métricas.</div>';
+      return;
+    }
+
+    var ctx = document.getElementById('litoRadar').getContext('2d');
+    clearChart();
 
     var datasets = [
       {
-        label: seriesOneLabel,
-        data: t.seriesOne,
-        borderColor: "#2563eb",
-        backgroundColor: "rgba(37, 99, 235, 0.14)",
-        pointBackgroundColor: "#2563eb",
-        pointBorderColor: "#2563eb",
-        borderWidth: 2,
+        label: metric1Name,
+        data: normalized.serie1,
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37, 99, 235, 0.14)',
+        pointBackgroundColor: '#2563eb',
+        pointBorderColor: '#2563eb',
         pointRadius: 4,
-        pointHoverRadius: 5,
-        tension: 0.15
+        borderWidth: 2,
+        fill: true
       }
     ];
 
-    var hasSecondSeries = t.seriesTwo.some(function (v) { return v !== null; });
-    if (hasSecondSeries) {
+    if (normalized.serie2.some(function (v) { return v !== null; })) {
       datasets.push({
-        label: seriesTwoLabel,
-        data: t.seriesTwo,
-        borderColor: "#16a34a",
-        backgroundColor: "rgba(22, 163, 74, 0.14)",
-        pointBackgroundColor: "#16a34a",
-        pointBorderColor: "#16a34a",
-        borderWidth: 2,
+        label: metric2Name,
+        data: normalized.serie2,
+        borderColor: '#16a34a',
+        backgroundColor: 'rgba(22, 163, 74, 0.14)',
+        pointBackgroundColor: '#16a34a',
+        pointBorderColor: '#16a34a',
         pointRadius: 4,
-        pointHoverRadius: 5,
-        tension: 0.15
+        borderWidth: 2,
+        fill: true
       });
     }
 
     chartInstance = new Chart(ctx, {
-      type: "radar",
+      type: 'radar',
       data: {
-        labels: t.labels,
+        labels: normalized.labels,
         datasets: datasets
       },
       options: {
@@ -174,11 +166,11 @@
         plugins: {
           legend: {
             display: true,
-            position: "bottom",
+            position: 'bottom',
             labels: {
-              color: "#374151",
               boxWidth: 12,
-              usePointStyle: true,
+              boxHeight: 12,
+              color: '#374151',
               font: { size: 12 }
             }
           },
@@ -187,42 +179,43 @@
             callbacks: {
               label: function (context) {
                 var value = context.raw;
-                return context.dataset.label + ": " + (value === null ? "Sin dato" : Number(value).toFixed(2));
+                if (value === null || value === undefined) return context.dataset.label + ': Sin dato';
+                return context.dataset.label + ': ' + Number(value).toFixed(2).replace('.', ',');
               }
             }
           }
         },
         scales: {
           r: {
-            min: minValue,
-            max: maxValue,
+            min: 0,
+            max: maxScale,
             ticks: {
-              stepSize: stepSize,
-              backdropColor: "transparent",
-              color: "#6b7280",
+              stepSize: 1,
+              backdropColor: 'transparent',
+              color: '#6b7280',
               font: { size: 10 }
             },
             pointLabels: {
-              color: "#111827",
-              font: { size: 12, weight: "500" }
+              color: '#111827',
+              font: { size: 12, weight: '600' }
             },
-            grid: { color: "rgba(156, 163, 175, 0.35)" },
-            angleLines: { color: "rgba(156, 163, 175, 0.35)" }
+            grid: { color: 'rgba(156, 163, 175, 0.35)' },
+            angleLines: { color: 'rgba(156, 163, 175, 0.35)' }
           }
         }
       }
     });
   }
 
-  Promise.all([loadScript(DSCC_URL), loadScript(CHART_URL)])
+  loadDependencies()
     .then(function () {
-      if (!window.dscc) {
-        renderMessage("No se pudo cargar DSCC.");
-        return;
+      if (window.dscc) {
+        window.dscc.subscribeToData(draw, { transform: window.dscc.objectTransform });
+      } else {
+        document.body.innerHTML = '<div class="lito-empty">No se pudo cargar DSCC.</div>';
       }
-      window.dscc.subscribeToData(render, { transform: window.dscc.objectTransform });
     })
     .catch(function (err) {
-      renderMessage(err.message || "Error al cargar Lito Radar Chart.");
+      document.body.innerHTML = '<div class="lito-empty">Error al cargar Lito Radar.<br>' + err + '</div>';
     });
 })();
